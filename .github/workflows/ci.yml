@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Dependency sanity check
+        run: python -m pip check
+      - name: Lint
+        run: |
+          ruff check \
+            src/rdsynth/pipeline/stage1_eval.py \
+            src/rdsynth/stages/stage2_conditioning.py \
+            src/rdsynth/stages/stage2_networks.py \
+            src/rdsynth/stages/stage2_training_utils.py \
+            src/rdsynth/stages/stage2_components.py
+      - name: Tests
+        run: pytest -q

@@ -1,0 +1,26 @@
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]
+"scripts/run_full_preflight.py" = ["E402"]
+"scripts/_run_csv_attack_sweep.py" = ["E402"]
+"scripts/build_pcap_semantic_map_catalog.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["rdsynth"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/rdsynth"]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+precision = 2

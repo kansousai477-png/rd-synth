@@ -1,0 +1,51 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Test and type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+coverage.xml
+.coverage
+
+# Claude Code local session state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Virtualenvs
+.venv/
+venv/
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local experiment outputs
+outputs/
+
+# Local data and derived artifacts
+data/
+
+# OS noise
+.DS_Store
+
+# Local runtime logs
+logs/
+
+# Third-party tools (CICFlowMeter + bundled JDK) — install manually
+tools/
+
+# Stray exported CSVs at repo root
+/*.csv
+
+# Local scratch files
+temp_prompt.md
+
+# Private paper and review materials (not for publication)
+/*.tex
+paper/
+reviews/

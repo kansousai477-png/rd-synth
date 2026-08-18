@@ -1,0 +1,277 @@
+﻿project:
+  seed: 42
+  device: auto
+  out_dir: outputs/debug/demo_fast
+  deterministic: false
+  num_threads: 8
+  num_interop_threads: 2
+
+data:
+  dataset: cic_nb15
+  task: binary
+  merge_strategy: intersection
+  drop_cols:
+    - Flow ID
+    - Src IP
+    - Dst IP
+    - Timestamp
+  log1p_cols: []
+  drop_zero_variance: true
+  drop_near_constant: true
+  near_constant_var: 1.0e-12
+  test_frac: 0.15
+  val_frac: 0.15
+  max_rows: 50000
+  preprocess:
+    winsorize_quantile: 0.01
+    impute: median
+    type_aware: true
+    power_transform: true
+    scaler: robust
+    discrete_scaling: minmax
+
+oracle_models:
+  - name: mlp_small
+    type: mlp
+    hidden_dims: [128, 128]
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+    sample_strategy: balanced
+  - name: mlp_deep
+    type: mlp
+    hidden_dims: [256, 256, 256]
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+  - name: cnn
+    type: cnn
+    channels: 32
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+  - name: rnn
+    type: rnn
+    hidden_dim: 64
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+  - name: gru
+    type: gru
+    hidden_dim: 64
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+  - name: lstm
+    type: lstm
+    hidden_dim: 64
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+  - name: mlp_wide
+    type: mlp
+    hidden_dims: [512, 256]
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+  - name: logistic
+    type: logistic
+  - name: rf
+    type: random_forest
+  - name: extra_trees
+    type: extra_trees
+  - name: linear_svm
+    type: linear_svm
+
+stage1:
+  z_dim: 32
+  gen_hidden: [256, 256]
+  sur_hidden: [256, 256]
+  steps: 2000
+  batch_size: 256
+  lr_s: 1.0e-3
+  lr_g: 1.0e-3
+  log_every: 200
+  query_strategy: entropy
+  query_pool: 4
+  query_mix_ratio: 0.5
+  query_real_ratio: 1.0
+  query_balance: true
+  real_warmup_steps: 200
+  calibration_bins: 10
+  query_budget: null
+  use_forward_diff: true
+  n_G: 1
+  n_S: 1
+  fd_m: 3
+  fd_epsilon: 0.01
+  consistency_weight: 0.1
+  consistency_noise: 0.05
+  balance_eval: true
+  force_retrain: true
+  eval_max_rows: 5000
+  eval_batch_size: 1024
+  compute_matrix: true
+  matrix_max_rows: 3000
+  matrix_batch_size: 1024
+  compare_baseline: true
+  baseline_steps: 500
+  data_quality:
+    enable: true
+    max_rows: 50000
+    high_missing_threshold: 0.1
+    corr_topk: 5
+
+stage2:
+  mode: latent_diffusion
+  epochs: 15
+  batch_size: 256
+  lr: 5.0e-5
+  ae_epochs: 10
+  ae_lr: 1.0e-3
+  latent_dim: 64
+  ae_hidden: [256, 128]
+  timesteps: 200
+  beta_start: 1.0e-4
+  beta_end: 2.0e-2
+  schedule_type: cosine
+  cond_dropout: 0.1
+  cond_dropout_start: 0.4
+  cond_dropout_end: 0.1
+  cond_dropout_warmup_epochs: 15
+  guidance_scale: 1.0
+  denoiser_hidden: 256
+  denoiser_dropout: 0.05
+  predict_x0: false
+  x0_head_tanh: false
+  cond_norm: true
+  emb_norm: true
+  eps_pred_clip: 3.0
+  latent_std_floor: 0.05
+  editor_hidden: [256, 128]
+  lambda_recon: 5.0
+  lambda_delta: 1.0
+  lambda_stp: 1.0
+  lambda_mmt: 0.5
+  lambda_corr: 0.1
+  lambda_var: 0.05
+  lambda_range: 0.1
+  lambda_mmd: 0.02
+  lambda_swd: 0.02
+  lambda_latent: 0.01
+  latent_warmup_epochs: 10
+  grad_clip: 1.0
+  lambda_sem: 0.05
+  lambda_ben: 0.0
+  lambda_protocol: 0.03
+  lambda_temporal: 0.03
+  lambda_preserve: 0.1
+  ben_temp: 10.0
+  ben_loss_clip: 10.0
+  var_std_floor: 0.01
+  mmd_max: 128
+  swd_proj: 32
+  oracle_name: mlp_small
+  require_stage1: true
+  eval_metrics: true
+  eval_denorm_metrics: false
+  eval_samples: 400
+  metrics_max_real: 400
+  metrics_max_gen: 400
+  sample_batch_size: 512
+  sample_init: benign_sample
+  latent_use_prior: false
+  latent_noise_scale: 1.0
+  sample_clip_minmax: true
+  sample_denorm_output: false
+  sample_pullback_alpha: 0.0
+  sample_pullback_k: 5
+  sample_moment_alpha: 0.0
+  sample_moment_std_floor: 1.0e-3
+  residual_scale: 0.2
+  mal_anchor_alpha: 0.0
+  post_clip_norm_range: true
+  deployable_constraints:
+    enable: true
+    port_policy: keep
+    port_allowlist: []
+    flag_policy: clip
+    temporal_policy: clip_benign
+  constraints:
+    enable: true
+    clip: true
+    round_integer: true
+    integer_tol: 0.05
+    integer_frac: 0.95
+    nonneg_tol: 1.0e-8
+  baselines:
+    enable: true
+    methods:
+      [identity, knn_benign, global_random, benign_neighbor_random, fgsm, pgd,
+       idsgan_lite, digfupas_lite, gpmt_lite, progen_lite, amoeba_lite, vulnergan_lite, netdiffusion_lite]
+    fgsm_eps: 0.05
+    pgd_eps: 0.1
+    pgd_alpha: 0.02
+    pgd_steps: 10
+    knn_k: 1
+    neighbor_random_k: 5
+    apply_constraints: true
+  save_samples: true
+  pareto_eval:
+    enable: true
+    auto_select: true
+    anchor_grid: [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]
+    max_samples: 200
+    selection:
+      prefer_oracle: true
+      asr_weight: 1.0
+      c2st_auc_weight: 0.35
+      adv_to_ben_l2_weight: 0.10
+      ffd_weight: 0.02
+      adv_pmal_weight: 0.25
+
+stage3:
+  adv_samples_path: ""
+  copy_adv_samples: true
+  feature_backend: auto
+  feature_aliases_path: ""
+  pcap_path: data/PCAPs/malicious/rat_backdoor_c2/20260120_rat_backdoor_c2_xworm.pcap
+  pcap_scan_dir: data/PCAPs/malicious
+  pcap_scan_limit: 5
+  pcap_scan_min_prob: 0.5
+  pcap_scan_glob: "*.pcap"
+  pcap_out_dir: outputs/debug/demo_fast/stage3/pcap
+  pcap_apply_n: 1
+  pcap_apply_fields: [mean_iat_ms, std_iat_ms, pad_bytes, dst_port_new, flag_ratio, flow_scale, payload_scale]
+  pcap_search_alphas: [0.25, 0.5, 1.0, 1.5]
+  pcap_search_probe_topk: 8
+  pcap_tcp_fixup: true
+  pcap_dst_port_policy: closest
+  pcap_dst_port_allowlist: []
+  pcap_align_min_coverage: 0.85
+  pcap_eval: true
+  pcap_eval_use_ids: true
+  pcap_eval_use_oracle: true
+  pcap_compare_baselines: false
+  ids_name: pcap_ids
+  pcap_ids_benign_path: data/PCAPs/benign/benign.pcap
+  remap_train_source: benign
+  remap_mode: direct
+  remap_min_r2: 0.0
+  loss: huber
+  huber_beta: 1.0
+  grad_clip: 1.0
+  target_clip_sigma: 5.0
+  weight_decay: 1.0e-4
+  epochs: 15
+  batch_size: 256
+  lr: 1.0e-4
+

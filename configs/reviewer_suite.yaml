@@ -1,0 +1,59 @@
+defaults:
+  out_root: outputs/reviewer_suite
+  seeds: [42]
+  stage2_baselines:
+    - identity
+    - global_random
+    - knn_benign
+    - fgsm
+    - pgd
+    - idsgan_lite
+    - amoeba_lite
+    - vulnergan_lite
+    - digfupas_lite
+    - gpmt_lite
+    - progen_lite
+    - netdiffusion_lite
+  ablation_variants:
+    - full
+    - w_o_stage1
+    - backbone_gan
+    - random_remap
+  transfer_ids:
+    - logistic_small
+    - random_forest_small
+    - linear_svm_small
+
+datasets:
+  nb15:
+    attacks:
+      - Generic
+      - Exploits
+      - Fuzzers
+      - DoS
+      - Worms
+      - Shellcode
+  "2017":
+    attacks:
+      - DDoS
+      - PortScan
+      - Bot
+      - Infiltration
+      - Heartbleed
+      - Web Attack - XSS
+  "2018":
+    attacks:
+      - DDOS attack-HOIC
+      - Bot
+      - FTP-BruteForce
+      - SSH-Bruteforce
+      - SQL Injection
+      - Infilteration
+      - Brute Force -XSS
+  iot23:
+    attacks:
+      - MITM-ArpSpoofing
+      - CommandInjection
+      - Backdoor_Malware
+      - DDoS-UDP_Flood
+      - VulnerabilityScan

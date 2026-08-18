@@ -1,0 +1,256 @@
+﻿# 鈹€鈹€ Full NB15 run for report generation 鈹€鈹€
+# Paper-quality parameters, multiple oracles for RQ1 matrix,
+# proper Stage3 with malicious source PCAP selection.
+
+project:
+  seed: 42
+  device: auto
+  out_dir: outputs/nb15_full
+  deterministic: false
+  num_threads: 4
+  num_interop_threads: 2
+
+data:
+  dataset: cic_nb15
+  task: binary
+  merge_strategy: intersection
+  drop_cols:
+    - Flow ID
+    - Src IP
+    - Dst IP
+    - Timestamp
+  drop_zero_variance: true
+  drop_near_constant: true
+  max_rows: 100000          # effectively all NB15 data
+  test_frac: 0.15
+  val_frac: 0.15
+  preprocess:
+    winsorize_quantile: 0.01
+    impute: median
+    type_aware: true
+    power_transform: true
+    scaler: robust
+    discrete_scaling: minmax
+
+# Multiple oracle types for RQ1 mutual extraction matrix
+oracle_models:
+  - name: mlp_small
+    type: mlp
+    hidden_dims: [128, 128]
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+  - name: cnn_small
+    type: cnn
+    channels: 32
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+  - name: rnn_small
+    type: rnn
+    hidden_dim: 64
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+  - name: gru_small
+    type: gru
+    hidden_dim: 64
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+  - name: lstm_small
+    type: lstm
+    hidden_dim: 64
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+  - name: transformer_small
+    type: transformer
+    d_model: 32
+    nhead: 4
+    num_layers: 1
+    epochs: 5
+    batch_size: 512
+    lr: 1.0e-3
+    max_batches_per_epoch: 50
+    class_weight: balanced
+  - name: rf
+    type: random_forest
+  - name: logistic
+    type: logistic
+  - name: linear_svm
+    type: linear_svm
+
+stage1:
+  z_dim: 32
+  gen_hidden: [256, 256]
+  sur_hidden: [256, 256]
+  steps: 600                  # half of paper_main for faster iteration
+  batch_size: 256
+  lr_s: 1.0e-3
+  lr_g: 1.0e-3
+  log_every: 100
+  query_strategy: entropy
+  query_pool: 2               # reduced for speed
+  query_mix_ratio: 0.5
+  query_real_ratio: 0.5
+  query_balance: true
+  real_warmup_steps: 60
+  query_budget: 300000
+  use_forward_diff: true
+  n_G: 1
+  n_S: 1
+  fd_m: 3
+  force_retrain: true
+  eval_max_rows: 5000
+  eval_batch_size: 1024
+  compute_matrix: true        # RQ1 mutual extraction matrix
+  matrix_max_rows: 3000
+  matrix_batch_size: 1024
+  compare_baseline: false
+  baseline_steps: 200
+  data_quality:
+    enable: true
+    max_rows: 50000
+
+stage2:
+  mode: latent_diffusion
+  epochs: 18                  # more epochs for quality
+  batch_size: 256
+  lr: 5.0e-5
+  ae_epochs: 10
+  ae_lr: 1.0e-3
+  latent_dim: 64
+  ae_hidden: [256, 128]
+  timesteps: 150
+  beta_start: 1.0e-4
+  beta_end: 2.0e-2
+  schedule_type: cosine
+  cond_dropout: 0.1
+  cond_dropout_start: 0.4
+  cond_dropout_end: 0.1
+  cond_dropout_warmup_epochs: 12
+  guidance_scale: 2.0
+  denoiser_hidden: 256
+  denoiser_dropout: 0.05
+  predict_x0: true
+  x0_head_tanh: true
+  cond_norm: true
+  emb_norm: true
+  eps_pred_clip: 3.0
+  latent_std_floor: 0.05
+  lambda_stp: 1.0
+  lambda_mmt: 0.5
+  lambda_corr: 0.1
+  lambda_var: 0.05
+  lambda_range: 0.1
+  lambda_mmd: 0.02
+  lambda_swd: 0.02
+  lambda_latent: 0.01
+  latent_warmup_epochs: 10
+  lambda_sem: 0.05
+  lambda_ben: 0.02
+  lambda_protocol: 0.03
+  lambda_temporal: 0.03
+  lambda_preserve: 0.1
+  structure_every: 2
+  ben_temp: 10.0
+  ben_loss_clip: 10.0
+  var_std_floor: 0.01
+  mmd_max: 128
+  swd_proj: 32
+  oracle_name: mlp_small
+  require_stage1: true
+  eval_metrics: true
+  eval_denorm_metrics: true
+  eval_samples: 600
+  metrics_max_real: 600
+  metrics_max_gen: 600
+  sample_batch_size: 256
+  sample_init: benign_sample
+  sample_clip_minmax: true
+  sample_denorm_output: false
+  mal_anchor_alpha: 0.1
+  deployable_constraints:
+    enable: true
+    port_policy: keep
+    flag_policy: clip
+    temporal_policy: clip_benign
+  constraints:
+    enable: true
+    clip: true
+    round_integer: true
+  baselines:
+    enable: true
+    methods:
+      - fgsm
+      - pgd
+      - idsgan_lite
+      - digfupas_lite
+      - gpmt_lite
+      - progen_lite
+      - amoeba_lite
+      - vulnergan_lite
+      - netdiffusion_lite
+      - knn_benign
+    fgsm_eps: 0.05
+    pgd_eps: 0.1
+    pgd_alpha: 0.02
+    pgd_steps: 10
+    apply_constraints: true
+  pareto_eval:
+    enable: true
+    auto_select: true
+    anchor_grid: [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]
+    max_samples: 200
+    selection:
+      prefer_oracle: true
+      asr_weight: 1.0
+      c2st_auc_weight: 0.35
+      adv_to_ben_l2_weight: 0.10
+      ffd_weight: 0.02
+      adv_pmal_weight: 0.25
+
+stage3:
+  feature_backend: auto
+  pcap_scan_dir: data/PCAPs/malicious
+  pcap_scan_limit: 20
+  pcap_scan_min_prob: 0.5
+  pcap_scan_glob: "*.pcap"
+  pcap_mandatory_paths:
+    - data/PCAPs/malicious/online_pcap/fuzz_sele.pcap
+    - data/PCAPs/malicious/online_pcap/sql.pcap
+    - data/PCAPs/malicious/online_pcap/weakpass_Brute.pcap
+    - data/PCAPs/malicious/exploit_kit
+    - data/PCAPs/malicious/botnet_loader
+    - data/PCAPs/malicious/rat_backdoor_c2
+  pcap_apply_n: 1
+  pcap_apply_fields: [mean_iat_ms, std_iat_ms, dst_port_new, flag_ratio, flow_scale, pad_bytes, payload_scale]
+  pcap_search_alphas: [0.25, 0.5, 1.0, 1.5]
+  pcap_search_probe_topk: 8
+  pcap_tcp_fixup: true
+  pcap_dst_port_policy: closest
+  pcap_cache_enable: true
+  pcap_multi_step_max_rounds: 3
+  pcap_eval: true
+  pcap_eval_use_ids: false
+  pcap_eval_use_oracle: true
+  pcap_compare_baselines: true
+  remap_train_source: all
+  remap_mode: learned
+  loss: huber
+  huber_beta: 0.5
+  epochs: 20
+  batch_size: 256
+  lr: 1.0e-4
+  protocol_auto_fix: true

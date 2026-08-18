@@ -1,0 +1,324 @@
+project:
+  seed: 42
+  device: auto
+  out_dir: outputs/paper_main_simple
+  num_threads: 4
+  num_interop_threads: 2
+data:
+  dataset: cic_nb15
+  task: binary
+  merge_strategy: intersection
+  drop_cols:
+  - Flow ID
+  - Src IP
+  - Dst IP
+  - Timestamp
+  log1p_cols: []
+  drop_zero_variance: true
+  drop_near_constant: true
+  near_constant_var: 1.0e-12
+  test_frac: 0.15
+  val_frac: 0.15
+  max_rows: 20000
+  preprocess:
+    winsorize_quantile: 0.01
+    impute: median
+    type_aware: true
+    power_transform: true
+    scaler: robust
+    discrete_scaling: minmax
+    schema_overrides:
+      discrete:
+      - Fwd Seg Size Min
+      - Fwd Header Length
+      - Bwd Header Length
+      - FWD Init Win Bytes
+      - Bwd Init Win Bytes
+      - Fwd Act Data Pkts
+oracle_models:
+- name: mlp_small
+  type: mlp
+  hidden_dims:
+  - 128
+  - 128
+  epochs: 5
+  batch_size: 512
+  lr: 0.001
+  max_batches_per_epoch: 50
+  class_weight: balanced
+  sample_strategy: balanced
+stage1:
+  z_dim: 32
+  gen_hidden:
+  - 256
+  - 256
+  sur_hidden:
+  - 256
+  - 256
+  steps: 1200
+  batch_size: 256
+  lr_s: 0.001
+  lr_g: 0.001
+  log_every: 200
+  query_strategy: entropy
+  query_pool: 4
+  query_mix_ratio: 0.5
+  query_real_ratio: 1.0
+  query_balance: true
+  real_warmup_steps: 120
+  calibration_bins: 10
+  query_budget: null
+  use_forward_diff: true
+  n_G: 1
+  n_S: 1
+  fd_m: 3
+  fd_epsilon: 0.01
+  consistency_weight: 0.1
+  consistency_noise: 0.05
+  balance_eval: true
+  force_retrain: true
+  eval_max_rows: 3000
+  eval_batch_size: 1024
+  compute_matrix: false
+  matrix_max_rows: 2000
+  matrix_batch_size: 1024
+  compare_baseline: true
+  baseline_steps: 400
+  oracle_names:
+  - mlp_small
+  data_quality:
+    enable: true
+    max_rows: 50000
+    high_missing_threshold: 0.1
+    corr_topk: 5
+stage2:
+  mode: latent_diffusion
+  epochs: 30
+  batch_size: 256
+  lr: 5.0e-05
+  ae_epochs: 20
+  ae_lr: 0.001
+  latent_dim: 64
+  ae_hidden:
+  - 256
+  - 128
+  timesteps: 200
+  beta_start: 0.0001
+  beta_end: 0.02
+  schedule_type: cosine
+  cond_dropout: 0.1
+  cond_dropout_start: 0.4
+  cond_dropout_end: 0.1
+  cond_dropout_warmup_epochs: 10
+  guidance_scale: 2.0
+  denoiser_hidden: 256
+  denoiser_dropout: 0.05
+  predict_x0: false
+  x0_head_tanh: false
+  cond_norm: true
+  emb_norm: true
+  eps_pred_clip: 3.0
+  latent_std_floor: 0.05
+  editor_hidden:
+  - 256
+  - 128
+  lambda_recon: 5.0
+  lambda_delta: 1.0
+  lambda_stp: 1.0
+  lambda_mmt: 0.5
+  lambda_corr: 0.1
+  lambda_var: 0.05
+  lambda_range: 0.1
+  lambda_protocol: 0.03
+  lambda_temporal: 0.03
+  lambda_mmd: 0.02
+  lambda_swd: 0.02
+  lambda_latent: 0.01
+  latent_warmup_epochs: 15
+  grad_clip: 1.0
+  lambda_sem: 0.05
+  lambda_ben: 0.5
+  lambda_preserve: 0.05
+  ben_temp: 6.0
+  ben_loss_clip: 20.0
+  var_std_floor: 0.01
+  mmd_max: 256
+  swd_proj: 64
+  oracle_name: mlp_small
+  require_stage1: true
+  eval_metrics: true
+  eval_denorm_metrics: false
+  eval_samples: 1000
+  metrics_max_real: 1000
+  metrics_max_gen: 1000
+  sample_batch_size: 512
+  sample_init: benign_sample
+  latent_use_prior: false
+  latent_noise_scale: 1.0
+  sample_clip_minmax: true
+  sample_denorm_output: false
+  sample_pullback_alpha: 0.0
+  sample_pullback_k: 5
+  sample_moment_alpha: 0.0
+  sample_moment_std_floor: 0.001
+  residual_scale: 0.2
+  mal_anchor_alpha: 0.0
+  selection_eval_every: 5
+  selection_eval_samples: 256
+  selection_batch_size: 256
+  selection_mal_anchor_alpha: 0.1
+  post_clip_norm_range: true
+  deployable_constraints:
+    enable: true
+    port_policy: keep
+    port_allowlist: []
+    flag_policy: clip
+    temporal_policy: clip_benign
+  constraints:
+    enable: true
+    clip: true
+    round_integer: true
+    integer_tol: 0.05
+    integer_frac: 0.95
+    nonneg_tol: 1.0e-08
+  baselines:
+    enable: true
+    methods:
+    - identity
+    - knn_benign
+    - global_random
+    - benign_neighbor_random
+    - fgsm
+    - pgd
+    - idsgan_lite
+    - digfupas_lite
+    - gpmt_lite
+    - progen_lite
+    - amoeba_lite
+    - vulnergan_lite
+    - netdiffusion_lite
+    fgsm_eps: 0.2
+    pgd_eps: 0.5
+    pgd_alpha: 0.05
+    pgd_steps: 20
+    knn_k: 1
+    neighbor_random_k: 5
+    apply_constraints: true
+    stabilize_inputs: true
+    stabilize_quantile: 0.01
+    hard_label_queries: true
+    query_budget: 20000
+    paper_query_budget: 40000
+    hard_label_threshold: 0.5
+    exhausted_fill: 1.0
+  blackbox_eval:
+    hard_label_queries: true
+    query_budget: 10000
+    hard_label_threshold: 0.5
+    exhausted_fill: 1.0
+  save_samples: true
+  pareto_eval:
+    enable: true
+    auto_select: true
+    anchor_grid:
+    - 0.0
+    - 0.05
+    - 0.1
+    - 0.2
+    - 0.3
+    - 0.5
+    max_samples: 1000
+    selection:
+      candidate_selection: global_pareto
+      prefer_decision_score: false
+      prefer_oracle: true
+      asr_weight: 1.0
+      c2st_auc_weight: 0.35
+      adv_to_ben_l2_weight: 0.1
+      ffd_weight: 0.02
+      adv_pmal_weight: 0.25
+      min_asr_oracle: 0.95
+      min_asr_surrogate: 0.9
+      max_ffd: 50.0
+      max_adv_to_mal_l2: 40.0
+      selection_decision_weight: 0.3
+      selection_remapability_weight: 0.25
+      selection_stage3_loop_weight: 0.3
+      selection_support_weight: 0.15
+      closed_loop_decision_weight: 0.25
+      closed_loop_stage3_weight: 0.5
+      closed_loop_support_weight: 0.25
+      iterative_rounds: 3
+      iterative_radius: 0.075
+      iterative_radius_decay: 0.5
+      iterative_points: 5
+stage3:
+  pcap_target_source: pcap_conditioned
+  adv_samples_path: ''
+  copy_adv_samples: true
+  feature_backend: nfstream
+  feature_aliases_path: ''
+  cicflowmeter_cmd: java -Djava.library.path=tools/CICFlowMeter/CICFlowMeter-4.0/lib/native
+    -cp tools/CICFlowMeter/CICFlowMeter-4.0/lib/* cic.cs.unb.ca.ifm.Cmd
+  cicflowmeter_timeout: 300
+  pcap_path: ''
+  pcap_scan_dir: data/PCAPs/malicious
+  pcap_scan_limit: 32
+  pcap_scan_min_prob: 0.5
+  pcap_scan_glob: '*.pcap'
+  pcap_source_selection_mode: random_hard
+  pcap_source_sample_n: 3
+  pcap_out_dir: outputs/paper_main/stage3/pcap
+  pcap_apply_n: 1
+  pcap_multi_step_max_rounds: 3
+  pcap_apply_fields:
+  - mean_iat_ms
+  - std_iat_ms
+  - pad_bytes
+  - dst_port_new
+  - flag_ratio
+  - flow_scale
+  - payload_scale
+  - tcp_init_win_fwd
+  - tcp_init_win_bwd
+  - fwd_pkt_scale
+  pcap_search_alphas:
+  - 0.3
+  - 0.5
+  - 0.75
+  - 1.0
+  - 1.5
+  pcap_search_probe_topk: 8
+  pcap_search_rounds: 2
+  pcap_search_bidirectional: true
+  pcap_search_field_subsets: true
+  pcap_tcp_fixup: true
+  pcap_dst_port_policy: closest
+  pcap_dst_port_allowlist: []
+  pcap_align_min_coverage: 0.7
+  pcap_feature_fail_closed: true
+  pcap_feature_fail_on_partial_alignment: true
+  pcap_eval: true
+  pcap_eval_use_ids: true
+  pcap_eval_use_oracle: true
+  pcap_eval_dual: true
+  pcap_compare_baselines: true
+  ids_name: pcap_ids
+  pcap_ids_benign_path: data/PCAPs/benign/benign.pcap
+  pcap_mandatory_paths:
+  - data/PCAPs/malicious/other_malware_or_unknown/undated_other_malware_or_unknown_fuzz_sele.pcap
+  - data/PCAPs/malicious/other_malware_or_unknown/undated_other_malware_or_unknown_sqlchanged.pcap
+  - data/PCAPs/malicious/other_malware_or_unknown/undated_other_malware_or_unknown_weakpass_brute.pcap
+  remap_train_source: all
+  remap_mode: learned
+  remap_min_r2: 0.0
+  remap_min_decision_score: 0.55
+  loss: huber
+  huber_beta: 0.5
+  grad_clip: 1.0
+  target_clip_sigma: 3.0
+  weight_decay: 1.0e-05
+  epochs: 20
+  batch_size: 256
+  lr: 0.0005
+  pcap_ids_training_max_pcaps: 10

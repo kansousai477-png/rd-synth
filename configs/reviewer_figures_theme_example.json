@@ -1,0 +1,19 @@
+{
+  "name": "custom",
+  "font_family": "DejaVu Sans",
+  "figure_facecolor": "#fffaf3",
+  "axes_facecolor": "#fffdf8",
+  "grid_color": "#d8d2c6",
+  "text_color": "#26231f",
+  "benign_color": "#4f7c74",
+  "malicious_color": "#c05a35",
+  "adv_color": "#2f4858",
+  "accent_color": "#9c6644",
+  "heatmap_low": "#f5ead9",
+  "heatmap_mid": "#d0d9d5",
+  "heatmap_high": "#2f4858",
+  "delta_low": "#cf6a4a",
+  "delta_mid": "#fffdfa",
+  "delta_high": "#4f7c74",
+  "method_palette": ["#2f4858", "#4f7c74", "#c05a35", "#9c6644", "#6c757d"]
+}
